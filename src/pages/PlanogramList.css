@@ -1,0 +1,124 @@
+.planogram-list-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.planogram-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.planogram-list-header h1 {
+  margin: 0;
+  color: #333;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #545b62;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #6c757d;
+}
+
+.empty-state p {
+  font-size: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.planogram-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.planogram-card {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s;
+}
+
+.planogram-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.planogram-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.planogram-card-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.planogram-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.planogram-card-body {
+  color: #6c757d;
+}
+
+.planogram-card-body p {
+  margin: 0.5rem 0;
+}
+
