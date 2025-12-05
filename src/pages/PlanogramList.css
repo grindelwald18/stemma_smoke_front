@@ -1,124 +1,165 @@
 .planogram-list-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+    background: #ffffff;
+    min-height: calc(100vh - 64px);
+}
+
+.planogram-list-container .ant-spin {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
 }
 
 .planogram-list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
 }
 
-.planogram-list-header h1 {
-  margin: 0;
-  color: #333;
+.planogram-list-header h1,
+.planogram-list-header .ant-typography {
+    margin: 0;
+    font-family: "SEITU", "Segoe UI Variable Display", "Segoe UI", system-ui,
+        sans-serif;
+    font-weight: 500; /* Medium */
+    color: #343434;
 }
 
 .btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 1rem;
-  transition: background-color 0.2s;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    font-family: "Aptos", "Segoe UI Variable Text", "Segoe UI", system-ui,
+        sans-serif;
+    font-size: 1rem;
+    font-weight: 500; /* Medium */
+    transition: background-color 0.2s, color 0.2s;
 }
 
 .btn-primary {
-  background-color: #007bff;
-  color: white;
+    background-color: #00bb31;
+    color: white;
 }
 
-.btn-primary:hover {
-  background-color: #0056b3;
+.btn-primary:hover,
+a.btn-primary:hover {
+    background-color: #009931;
+    color: white !important;
 }
 
 .btn-secondary {
-  background-color: #6c757d;
-  color: white;
+    background-color: #666666;
+    color: white;
 }
 
-.btn-secondary:hover {
-  background-color: #545b62;
+.btn-secondary:hover,
+a.btn-secondary:hover {
+    background-color: #343434;
+    color: white !important;
 }
 
 .btn-danger {
-  background-color: #dc3545;
-  color: white;
+    background-color: #dc3545;
+    color: white;
 }
 
-.btn-danger:hover {
-  background-color: #c82333;
+.btn-danger:hover,
+a.btn-danger:hover {
+    background-color: #c82333;
+    color: white !important;
 }
 
 .btn-sm {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .error-message {
-  background-color: #f8d7da;
-  color: #721c24;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
 }
 
 .empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-  color: #6c757d;
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #666666;
 }
 
 .empty-state p {
-  font-size: 1.25rem;
-  margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
 }
 
 .planogram-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
 }
 
 .planogram-card {
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.2s;
+    height: 100%;
+}
+
+.planogram-card .ant-card-actions {
+    border-top: 1px solid #f0f0f0;
+}
+
+.planogram-card .ant-card-actions li {
+    margin: 12px 0;
+}
+
+.planogram-card .ant-card-meta-title {
+    margin-bottom: 8px;
+}
+
+.planogram-card .ant-card-meta-description {
+    margin-top: 8px;
 }
 
 .planogram-card:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .planogram-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1rem;
+    margin-bottom: 1rem;
 }
 
 .planogram-card-header h3 {
-  margin: 0;
-  color: #333;
-}
-
-.planogram-card-actions {
-  display: flex;
-  gap: 0.5rem;
+    margin: 0 0 1rem 0;
+    color: #343434;
+    font-size: 1.25rem;
+    word-break: break-word;
 }
 
 .planogram-card-body {
-  color: #6c757d;
+    color: #666666;
+    flex: 1;
+    margin-bottom: 1rem;
 }
 
 .planogram-card-body p {
-  margin: 0.5rem 0;
+    margin: 0.5rem 0;
+    word-break: break-word;
+    font-size: 0.9rem;
 }
 
+.planogram-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid #cccccc;
+    flex-wrap: wrap;
+}

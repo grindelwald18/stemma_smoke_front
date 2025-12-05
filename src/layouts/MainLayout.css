@@ -1,0 +1,124 @@
+.main-layout {
+    min-height: 100vh;
+    background: #fafafa;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-header {
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid #cccccc;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 0;
+}
+
+.main-header .ant-layout-header {
+    background: #ffffff;
+    padding: 0;
+    height: 64px;
+    line-height: 64px;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0 24px;
+    height: 64px;
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.header-title {
+    margin: 0;
+    color: #343434;
+    font-family: "SEITU", "Segoe UI Variable Display", "Segoe UI", system-ui,
+        sans-serif;
+    font-weight: 500; /* Medium */
+    font-size: 20px;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.menu-blocks {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+}
+
+.menu-item {
+    background: transparent;
+    border: none;
+    padding: 0px 16px;
+    color: #666666;
+    font-family: "Aptos", "Segoe UI Variable Text", "Segoe UI", system-ui,
+        sans-serif;
+    font-size: 14px;
+    font-weight: 400; /* Regular */
+    cursor: pointer;
+    transition: color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.menu-item:hover {
+    color: #00bb31;
+}
+
+.menu-item.active {
+    color: #00bb31;
+}
+
+.menu-item.active::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 16px;
+    right: 16px;
+    height: 2px;
+    background-color: #00bb31;
+}
+
+.logout-btn {
+    background-color: #ff4d4f;
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: "Aptos", "Segoe UI Variable Text", "Segoe UI", system-ui,
+        sans-serif;
+    font-size: 14px;
+    font-weight: 500; /* Medium */
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.logout-btn:hover {
+    background-color: #ff7875;
+}
+
+.logout-btn:active {
+    transform: translateY(1px);
+}
+
+.main-content {
+    width: 100%;
+    background: #fafafa;
+    min-height: calc(100vh - 64px);
+    flex: 1;
+    padding: 0;
+}
