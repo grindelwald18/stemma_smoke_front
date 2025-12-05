@@ -1,0 +1,62 @@
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #d1f0d8 0%, #ffffff 100%);
+    padding: 20px;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.login-card .ant-card-body {
+    padding: 40px;
+}
+
+.login-card .ant-typography {
+    font-family: "SEITU", "Segoe UI Variable Display", "Segoe UI", system-ui,
+        sans-serif;
+    font-weight: 500;
+    color: #343434;
+}
+
+.login-card .ant-form-item-label > label {
+    font-family: "Aptos", "Segoe UI Variable Text", "Segoe UI", system-ui,
+        sans-serif;
+    font-weight: 500;
+    color: #343434;
+}
+
+.login-card .ant-form-item {
+    margin-bottom: 24px;
+}
+
+.login-card .ant-input-affix-wrapper,
+.login-card .ant-input {
+    font-family: "Aptos", "Segoe UI Variable Text", "Segoe UI", system-ui,
+        sans-serif;
+}
+
+.login-footer {
+    text-align: center;
+    font-size: 14px;
+    color: #666666;
+}
+
+.login-footer span {
+    margin-right: 8px;
+}
+
+.login-footer a {
+    color: #00bb31;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.login-footer a:hover {
+    text-decoration: underline;
+}

@@ -1,0 +1,88 @@
+/* Подключение шрифтов SEITU и Aptos */
+
+/* SEITU - для заголовков и акцентов */
+@font-face {
+    font-family: "SEITU";
+    src: url("/fonts/SEITU-ExtraLight.woff2") format("woff2"),
+        url("/fonts/SEITU-ExtraLight.woff") format("woff"),
+        url("/fonts/SEITU-ExtraLight.ttf") format("truetype");
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SEITU";
+    src: url("/fonts/SEITU-Regular.woff2") format("woff2"),
+        url("/fonts/SEITU-Regular.woff") format("woff"),
+        url("/fonts/SEITU-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SEITU";
+    src: url("/fonts/SEITU-Medium.woff2") format("woff2"),
+        url("/fonts/SEITU-Medium.woff") format("woff"),
+        url("/fonts/SEITU-Medium.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SEITU";
+    src: url("/fonts/SEITU-Bold.woff2") format("woff2"),
+        url("/fonts/SEITU-Bold.woff") format("woff"),
+        url("/fonts/SEITU-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Aptos - для основного текста */
+/* Extra Light - используем Light как Extra Light */
+@font-face {
+    font-family: "Aptos";
+    src: url("/fonts/Aptos-Light.woff2") format("woff2"),
+        url("/fonts/Aptos-Light.woff") format("woff"),
+        url("/fonts/Aptos-Light.ttf") format("truetype");
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Aptos";
+    src: url("/fonts/Aptos-Regular.woff2") format("woff2"),
+        url("/fonts/Aptos-Regular.woff") format("woff"),
+        url("/fonts/Aptos-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Aptos";
+    src: url("/fonts/Aptos-Medium.woff2") format("woff2"),
+        url("/fonts/Aptos-Medium.woff") format("woff"),
+        url("/fonts/Aptos-Medium.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Aptos";
+    src: url("/fonts/Aptos-Bold.woff2") format("woff2"),
+        url("/fonts/Aptos-Bold.woff") format("woff"),
+        url("/fonts/Aptos-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Fallback для системных шрифтов, если файлы не загружены */
+/* SEITU может быть доступен в системе как "Segoe UI Variable Display" */
+/* Aptos может быть доступен в системе как "Aptos" или "Segoe UI Variable Text" */

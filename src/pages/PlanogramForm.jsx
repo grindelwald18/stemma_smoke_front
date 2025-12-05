@@ -1,23 +1,43 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { 
+  Form, 
+  Select, 
+  DatePicker, 
+  InputNumber, 
+  Button, 
+  Card, 
+  Typography, 
+  Space, 
+  Spin, 
+  message, 
+  Alert,
+  Row,
+  Col,
+  Divider
+} from 'antd';
+import { FaArrowLeft, FaSave } from 'react-icons/fa';
+import dayjs from 'dayjs';
+import 'dayjs/locale/ru';
 import { planogramService } from '../services/planogramService.js';
 import { cabinetService } from '../services/cabinetService.js';
-import { Planogram } from '../models/Planogram.js';
 import './PlanogramForm.css';
+
+// Устанавливаем русскую локаль для dayjs
+dayjs.locale('ru');
+
+const { Title, Text } = Typography;
 
 export default function PlanogramForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = !!id;
+  const [form] = Form.useForm();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  
-  const [cabinetId, setCabinetId] = useState('');
-  const [timestamp, setTimestamp] = useState('');
-  const [mapping, setMapping] = useState({});
-  
+
   const [cabinets, setCabinets] = useState([]);
   const [selectedCabinet, setSelectedCabinet] = useState(null);
 
@@ -45,169 +65,231 @@ export default function PlanogramForm() {
       const planogram = await planogramService.getById(id);
       if (!planogram) {
         setError('Планограмма не найдена');
+        message.error('Планограмма не найдена');
         return;
       }
-      setCabinetId(planogram.cabinet_id.toString());
-      setTimestamp(new Date(planogram.timestamp).toISOString().slice(0, 16));
-      setMapping({ ...planogram.mapping });
-      
+
       const cabinet = await cabinetService.getById(planogram.cabinet_id);
       setSelectedCabinet(cabinet);
+
+      // Устанавливаем значения формы
+      form.setFieldsValue({
+        cabinet_id: planogram.cabinet_id,
+        timestamp: dayjs(planogram.timestamp),
+        mapping: planogram.mapping
+      });
     } catch (err) {
       setError('Ошибка при загрузке планограммы');
+      message.error('Ошибка при загрузке планограммы');
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCabinetChange = async (e) => {
-    const newCabinetId = e.target.value;
-    setCabinetId(newCabinetId);
-    
-    if (newCabinetId) {
-      const cabinet = await cabinetService.getById(newCabinetId);
+  const handleCabinetChange = async (cabinetId) => {
+    if (cabinetId) {
+      const cabinet = await cabinetService.getById(cabinetId);
       setSelectedCabinet(cabinet);
-      
+
       // Инициализируем маппинг для всех пушеров пустыми значениями
       if (cabinet) {
+        const currentMapping = form.getFieldValue('mapping') || {};
         const newMapping = {};
         cabinet.shelves.forEach(shelf => {
           shelf.dispensers.forEach(dispenser => {
-            newMapping[dispenser.id] = mapping[dispenser.id] || 0;
+            newMapping[dispenser.id] = currentMapping[dispenser.id] || 0;
           });
         });
-        setMapping(newMapping);
+        form.setFieldValue('mapping', newMapping);
       }
     } else {
       setSelectedCabinet(null);
-      setMapping({});
+      form.setFieldValue('mapping', {});
     }
   };
 
-  const handleDispenserChange = (dispenserId, skuId) => {
-    setMapping({
-      ...mapping,
-      [dispenserId]: skuId === '' ? 0 : parseInt(skuId) || 0
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (values) => {
     setSaving(true);
     setError(null);
 
     try {
-      const planogram = new Planogram(
-        isEdit ? parseInt(id) : 0,
-        parseInt(cabinetId),
-        new Date(timestamp),
-        mapping
-      );
+      // Преобразуем dayjs в Date
+      const timestamp = values.timestamp ? (dayjs.isDayjs(values.timestamp) ? values.timestamp.toDate() : new Date(values.timestamp)) : new Date();
+      
+      // Очищаем маппинг от undefined значений
+      const mapping = {};
+      if (values.mapping) {
+        Object.keys(values.mapping).forEach(key => {
+          const value = values.mapping[key];
+          mapping[key] = value !== undefined && value !== null ? parseInt(value) || 0 : 0;
+        });
+      }
+
+      const planogram = {
+        id: isEdit ? parseInt(id) : 0,
+        cabinet_id: values.cabinet_id,
+        timestamp: timestamp,
+        mapping: mapping
+      };
 
       if (isEdit) {
         await planogramService.update(id, planogram);
+        message.success('Планограмма успешно обновлена');
       } else {
         await planogramService.create(planogram);
+        message.success('Планограмма успешно создана');
       }
 
       navigate('/planograms');
     } catch (err) {
       setError('Ошибка при сохранении планограммы');
+      message.error('Ошибка при сохранении планограммы');
       console.error(err);
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
-    return <div className="planogram-form-container">Загрузка...</div>;
-  }
-
   // Получаем все пушеры из всех полок выбранного шкафа
   const allDispensers = selectedCabinet
     ? selectedCabinet.shelves.flatMap(shelf => shelf.dispensers)
     : [];
 
+  if (loading) {
+    return (
+      <div className="planogram-form-container">
+        <Spin size="large" tip="Загрузка..." />
+      </div>
+    );
+  }
+
   return (
     <div className="planogram-form-container">
       <div className="planogram-form-header">
-        <h1>{isEdit ? 'Редактировать планограмму' : 'Создать планограмму'}</h1>
-        <button onClick={() => navigate('/planograms')} className="btn btn-secondary">
+        <Title level={2}>{isEdit ? 'Редактировать планограмму' : 'Создать планограмму'}</Title>
+        <Button
+          icon={<FaArrowLeft />}
+          onClick={() => navigate('/planograms')}
+        >
           Назад к списку
-        </button>
+        </Button>
       </div>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && (
+        <Alert
+          message="Ошибка"
+          description={error}
+          type="error"
+          showIcon
+          closable
+          style={{ marginBottom: 24 }}
+        />
+      )}
 
-      <form onSubmit={handleSubmit} className="planogram-form">
-        <div className="form-group">
-          <label htmlFor="cabinetId">Шкаф *</label>
-          <select
-            id="cabinetId"
-            value={cabinetId}
-            onChange={handleCabinetChange}
-            required
-            disabled={isEdit}
-          >
-            <option value="">Выберите шкаф</option>
-            {cabinets.map(cabinet => (
-              <option key={cabinet.id} value={cabinet.id}>
-                Шкаф #{cabinet.id}
-              </option>
-            ))}
-          </select>
-        </div>
+      <Card className="planogram-form-card">
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          initialValues={{
+            mapping: {}
+          }}
+          size="large"
+        >
+          <Row gutter={24}>
+            <Col xs={24} sm={24} md={12} lg={12}>
+              <Form.Item
+                name="cabinet_id"
+                label={<span style={{ fontWeight: 500 }}>Шкаф</span>}
+                rules={[{ required: true, message: 'Пожалуйста, выберите шкаф' }]}
+              >
+                <Select
+                  placeholder="Выберите шкаф"
+                  onChange={handleCabinetChange}
+                  disabled={isEdit}
+                  allowClear
+                >
+                  {cabinets.map(cabinet => (
+                    <Select.Option key={cabinet.id} value={cabinet.id}>
+                      Шкаф #{cabinet.id}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
 
-        <div className="form-group">
-          <label htmlFor="timestamp">Валидна до *</label>
-          <input
-            type="datetime-local"
-            id="timestamp"
-            value={timestamp}
-            onChange={(e) => setTimestamp(e.target.value)}
-            required
-          />
-        </div>
+            <Col xs={24} sm={24} md={12} lg={12}>
+              <Form.Item
+                name="timestamp"
+                label={<span style={{ fontWeight: 500 }}>Валидна до</span>}
+                rules={[{ required: true, message: 'Пожалуйста, выберите дату и время' }]}
+              >
+                <DatePicker
+                  showTime
+                  format="YYYY-MM-DD HH:mm"
+                  placeholder="Выберите дату и время"
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        {selectedCabinet && allDispensers.length > 0 && (
-          <div className="form-group">
-            <label>Маппинг пушеров в СКЮ</label>
-            <p className="form-hint">0 означает, что пушер должен быть пустым</p>
-            <div className="dispensers-grid">
-              {allDispensers.map(dispenser => (
-                <div key={dispenser.id} className="dispenser-item">
-                  <label htmlFor={`dispenser-${dispenser.id}`}>
-                    Пушер #{dispenser.id}
-                  </label>
-                  <input
-                    type="number"
-                    id={`dispenser-${dispenser.id}`}
-                    min="0"
-                    value={mapping[dispenser.id] || 0}
-                    onChange={(e) => handleDispenserChange(dispenser.id, e.target.value)}
-                    placeholder="СКЮ ID"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          {selectedCabinet && allDispensers.length > 0 && (
+            <>
+              <Divider orientation="left" style={{ marginTop: 32, marginBottom: 24 }}>
+                <Typography.Text strong>Маппинг пушеров в СКЮ</Typography.Text>
+                <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+                  (0 означает, что пушер должен быть пустым)
+                </Typography.Text>
+              </Divider>
 
-        <div className="form-actions">
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? 'Сохранение...' : isEdit ? 'Сохранить' : 'Создать'}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/planograms')}
-            className="btn btn-secondary"
-            disabled={saving}
-          >
-            Отмена
-          </button>
-        </div>
-      </form>
+              <Row gutter={[16, 16]}>
+                {allDispensers.map(dispenser => (
+                  <Col xs={12} sm={8} md={6} lg={4} xl={3} key={dispenser.id}>
+                    <Form.Item
+                      name={['mapping', dispenser.id]}
+                      label={<span style={{ fontSize: 13 }}>Пушер #{dispenser.id}</span>}
+                      initialValue={0}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <InputNumber
+                        min={0}
+                        placeholder="СКЮ"
+                        style={{ width: '100%' }}
+                        parser={(value) => value ? value.replace(/\D/g, '') : ''}
+                      />
+                    </Form.Item>
+                  </Col>
+                ))}
+              </Row>
+            </>
+          )}
+
+          <Divider style={{ marginTop: 32, marginBottom: 24 }} />
+
+          <Form.Item style={{ marginBottom: 0 }}>
+            <Space size="middle">
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={saving}
+                icon={<FaSave />}
+                size="large"
+              >
+                {isEdit ? 'Сохранить' : 'Создать'}
+              </Button>
+              <Button
+                onClick={() => navigate('/planograms')}
+                disabled={saving}
+                size="large"
+              >
+                Отмена
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Card>
     </div>
   );
 }

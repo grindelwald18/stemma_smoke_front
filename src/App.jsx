@@ -1,20 +1,40 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import PlanogramList from './pages/PlanogramList.jsx';
-import PlanogramForm from './pages/PlanogramForm.jsx';
+import { ConfigProvider } from 'antd';
+import ruRU from 'antd/locale/ru_RU';
+import dayjs from 'dayjs';
+import 'dayjs/locale/ru';
+import { RouterProvider } from 'react-router-dom';
+import { router } from './router';
 import './App.css';
+
+// Устанавливаем русскую локаль для dayjs
+dayjs.locale('ru');
+
+// Кастомная тема Ant Design с нашими цветами
+const theme = {
+  token: {
+    colorPrimary: '#00bb31',
+    colorSuccess: '#00bb31',
+    colorInfo: '#00bb31',
+    borderRadius: 6,
+    fontFamily: '"Aptos", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif',
+    fontSize: 14,
+  },
+  components: {
+    Button: {
+      fontWeight: 500,
+    },
+    Menu: {
+      itemSelectedBg: 'transparent',
+      itemHoverBg: 'transparent',
+    },
+  },
+};
 
 function App() {
   return (
-    <Router>
-      <div className="app">
-        <Routes>
-          <Route path="/planograms" element={<PlanogramList />} />
-          <Route path="/planograms/new" element={<PlanogramForm />} />
-          <Route path="/planograms/:id/edit" element={<PlanogramForm />} />
-          <Route path="/" element={<Navigate to="/planograms" replace />} />
-        </Routes>
-      </div>
-    </Router>
+    <ConfigProvider theme={theme} locale={ruRU}>
+      <RouterProvider router={router} />
+    </ConfigProvider>
   );
 }
 

@@ -1,44 +1,95 @@
-import { Cabinet } from '../models/Cabinet.js';
-import { Shelf } from '../models/Shelf.js';
-import { Dispenser } from '../models/Dispenser.js';
+// Моковые данные согласно структуре бэкенда
+const row_width = 66;
+const row_count = 12;
 
-// Временное хранилище для демонстрации
 const cabinets = [
-  new Cabinet(3, [
-    new Shelf(5, [
-      new Dispenser(0, 66, 0),
-      new Dispenser(1, 66, 66),
-      new Dispenser(2, 66, 132),
-      new Dispenser(3, 66, 198),
-      new Dispenser(4, 66, 264),
-      new Dispenser(5, 66, 330),
-      new Dispenser(6, 66, 396),
-      new Dispenser(7, 66, 462),
-      new Dispenser(8, 66, 528),
-      new Dispenser(9, 66, 594),
-      new Dispenser(10, 66, 660),
-      new Dispenser(11, 66, 726),
-    ])
-  ])
+  {
+    id: 3,
+    shelf_size: {
+      x: { value: row_width * row_count, unit: 'mm' },
+      y: { value: 340, unit: 'mm' },
+      z: { value: 170, unit: 'mm' }
+    },
+    shelves: [
+      {
+        id: 5,
+        dispensers: Array.from({ length: row_count }, (_, i) => ({
+          id: i,
+          width: { value: row_width, unit: 'mm' },
+          x_offset: { value: i * row_width, unit: 'mm' }
+        })),
+        cameras: [
+          {
+            id: 101,
+            hardware: {
+              fov: { value: 120, unit: 'Degree' }
+            },
+            position: {
+              x: { value: row_width * 1.5, unit: 'mm' },
+              y: { value: 130, unit: 'mm' }
+            },
+            rotation: {
+              x: { value: 40, unit: 'Degree' },
+              y: { value: 0, unit: 'Degree' }
+            }
+          },
+          {
+            id: 102,
+            hardware: {
+              fov: { value: 120, unit: 'Degree' }
+            },
+            position: {
+              x: { value: row_width * 4.5, unit: 'mm' },
+              y: { value: 130, unit: 'mm' }
+            },
+            rotation: {
+              x: { value: 40, unit: 'Degree' },
+              y: { value: 0, unit: 'Degree' }
+            }
+          },
+          {
+            id: 103,
+            hardware: {
+              fov: { value: 120, unit: 'Degree' }
+            },
+            position: {
+              x: { value: row_width * 7.5, unit: 'mm' },
+              y: { value: 130, unit: 'mm' }
+            },
+            rotation: {
+              x: { value: 40, unit: 'Degree' },
+              y: { value: 0, unit: 'Degree' }
+            }
+          },
+          {
+            id: 104,
+            hardware: {
+              fov: { value: 120, unit: 'Degree' }
+            },
+            position: {
+              x: { value: row_width * 10.5, unit: 'mm' },
+              y: { value: 130, unit: 'mm' }
+            },
+            rotation: {
+              x: { value: 40, unit: 'Degree' },
+              y: { value: 0, unit: 'Degree' }
+            }
+          }
+        ]
+      }
+    ]
+  }
 ];
 
 export const cabinetService = {
-  /**
-   * Получить все шкафы
-   * @returns {Promise<Cabinet[]>}
-   */
+
   async getAll() {
     return Promise.resolve([...cabinets]);
   },
 
-  /**
-   * Получить шкаф по ID
-   * @param {number} id
-   * @returns {Promise<Cabinet|null>}
-   */
   async getById(id) {
     const cabinet = cabinets.find(c => c.id === parseInt(id));
-    return Promise.resolve(cabinet || null);
+    return Promise.resolve(cabinet ? { ...cabinet } : null);
   }
 };
 

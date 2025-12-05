@@ -1,87 +1,133 @@
-import { Planogram } from '../models/Planogram.js';
+// Моковые данные согласно структуре бэкенда
+const now = new Date();
+const tomorrow = new Date(now);
+tomorrow.setDate(tomorrow.getDate() + 1);
+const nextWeek = new Date(now);
+nextWeek.setDate(nextWeek.getDate() + 7);
+const nextMonth = new Date(now);
+nextMonth.setMonth(nextMonth.getMonth() + 1);
 
-// Временное хранилище для демонстрации (в реальном приложении будет API)
 let planograms = [
-  new Planogram(1, 3, new Date(), {
-    0: 1,
-    1: 1,
-    2: 1,
-    3: 2,
-    4: 2,
-    5: 2,
-    6: 1,
-    7: 1,
-    8: 1,
-    9: 2,
-    10: 2,
-    11: 2,
-  })
+  {
+    id: 2,
+    cabinet_id: 3,
+    timestamp: now.toISOString(),
+    mapping: {
+      0: 1,
+      1: 1,
+      2: 1,
+      3: 2,
+      4: 2,
+      5: 2,
+      6: 1,
+      7: 1,
+      8: 1,
+      9: 2,
+      10: 2,
+      11: 2,
+    }
+  },
+  {
+    id: 3,
+    cabinet_id: 3,
+    timestamp: tomorrow.toISOString(),
+    mapping: {
+      0: 2,
+      1: 2,
+      2: 2,
+      3: 1,
+      4: 1,
+      5: 1,
+      6: 2,
+      7: 2,
+      8: 2,
+      9: 1,
+      10: 1,
+      11: 1,
+    }
+  },
+  {
+    id: 4,
+    cabinet_id: 3,
+    timestamp: nextWeek.toISOString(),
+    mapping: {
+      0: 3,
+      1: 3,
+      2: 4,
+      3: 4,
+      4: 3,
+      5: 3,
+      6: 4,
+      7: 4,
+      8: 3,
+      9: 3,
+      10: 4,
+      11: 4,
+    }
+  },
+  {
+    id: 5,
+    cabinet_id: 3,
+    timestamp: nextMonth.toISOString(),
+    mapping: {
+      0: 1,
+      1: 0,
+      2: 2,
+      3: 0,
+      4: 1,
+      5: 2,
+      6: 0,
+      7: 1,
+      8: 2,
+      9: 0,
+      10: 1,
+      11: 2,
+    }
+  }
 ];
 
-let nextId = 2;
+let nextId = 6;
 
 export const planogramService = {
-  /**
-   * Получить все планограммы
-   * @returns {Promise<Planogram[]>}
-   */
   async getAll() {
-    // Имитация API запроса
     return Promise.resolve([...planograms]);
   },
 
-  /**
-   * Получить планограмму по ID
-   * @param {number} id
-   * @returns {Promise<Planogram|null>}
-   */
   async getById(id) {
     const planogram = planograms.find(p => p.id === parseInt(id));
-    return Promise.resolve(planogram || null);
+    return Promise.resolve(planogram ? { ...planogram } : null);
   },
 
-  /**
-   * Создать новую планограмму
-   * @param {Planogram} planogram
-   * @returns {Promise<Planogram>}
-   */
   async create(planogram) {
-    const newPlanogram = new Planogram(
-      nextId++,
-      planogram.cabinet_id,
-      planogram.timestamp,
-      { ...planogram.mapping }
-    );
+    const newPlanogram = {
+      id: nextId++,
+      cabinet_id: planogram.cabinet_id,
+      timestamp: planogram.timestamp instanceof Date
+        ? planogram.timestamp.toISOString()
+        : planogram.timestamp,
+      mapping: { ...planogram.mapping }
+    };
     planograms.push(newPlanogram);
-    return Promise.resolve(newPlanogram);
+    return Promise.resolve({ ...newPlanogram });
   },
 
-  /**
-   * Обновить планограмму
-   * @param {number} id
-   * @param {Planogram} planogram
-   * @returns {Promise<Planogram|null>}
-   */
   async update(id, planogram) {
     const index = planograms.findIndex(p => p.id === parseInt(id));
     if (index === -1) {
       return Promise.resolve(null);
     }
-    const updated = new Planogram(
-      parseInt(id),
-      planogram.cabinet_id,
-      planogram.timestamp,
-      { ...planogram.mapping }
-    );
+    const updated = {
+      id: parseInt(id),
+      cabinet_id: planogram.cabinet_id,
+      timestamp: planogram.timestamp instanceof Date
+        ? planogram.timestamp.toISOString()
+        : planogram.timestamp,
+      mapping: { ...planogram.mapping }
+    };
     planograms[index] = updated;
-    return Promise.resolve(updated);
+    return Promise.resolve({ ...updated });
   },
 
-  /**
-   * Удалить планограмму
-   * @param {number} id
-   * @returns {Promise<boolean>}
-   */
   async delete(id) {
     const index = planograms.findIndex(p => p.id === parseInt(id));
     if (index === -1) {
