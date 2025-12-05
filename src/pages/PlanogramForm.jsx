@@ -1,26 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  Form, 
-  Select, 
-  DatePicker, 
-  InputNumber, 
-  Button, 
-  Card, 
-  Typography, 
-  Space, 
-  Spin, 
-  message, 
+import {
+  Form,
+  Select,
+  DatePicker,
+  InputNumber,
+  Button,
+  Card,
+  Typography,
+  Space,
+  Spin,
+  message,
   Alert,
   Row,
   Col,
-  Divider
+  Divider,
+  Modal
 } from 'antd';
 import { FaArrowLeft, FaSave } from 'react-icons/fa';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ru';
 import { planogramService } from '../services/planogramService.js';
 import { cabinetService } from '../services/cabinetService.js';
+import ShowcaseGrid from './ShowcaseGrid/index.jsx';
 import './PlanogramForm.css';
 
 // Устанавливаем русскую локаль для dayjs
@@ -41,6 +43,24 @@ export default function PlanogramForm() {
   const [cabinets, setCabinets] = useState([]);
   const [selectedCabinet, setSelectedCabinet] = useState(null);
 
+  // Состояние для модалки редактирования SKU
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedDispenserId, setSelectedDispenserId] = useState(null);
+  const [modalForm] = Form.useForm();
+  const [mappingUpdateKey, setMappingUpdateKey] = useState(0);
+
+  // Отслеживаем изменения mapping для обновления визуализации
+  const mappingValue = Form.useWatch('mapping', form) || {};
+
+  // Моковый список доступных SKU (в реальном приложении будет загружаться с сервера)
+  const availableSkus = [
+    { value: 1, label: 'SKU 1' },
+    { value: 2, label: 'SKU 2' },
+    { value: 3, label: 'SKU 3' },
+    { value: 4, label: 'SKU 4' },
+    { value: 5, label: 'SKU 5' },
+  ];
+
   useEffect(() => {
     loadCabinets();
     if (isEdit) {
@@ -48,6 +68,7 @@ export default function PlanogramForm() {
     } else {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadCabinets = async () => {
@@ -116,7 +137,7 @@ export default function PlanogramForm() {
     try {
       // Преобразуем dayjs в Date
       const timestamp = values.timestamp ? (dayjs.isDayjs(values.timestamp) ? values.timestamp.toDate() : new Date(values.timestamp)) : new Date();
-      
+
       // Очищаем маппинг от undefined значений
       const mapping = {};
       if (values.mapping) {
@@ -153,8 +174,95 @@ export default function PlanogramForm() {
 
   // Получаем все пушеры из всех полок выбранного шкафа
   const allDispensers = selectedCabinet
-    ? selectedCabinet.shelves.flatMap(shelf => shelf.dispensers)
+    ? selectedCabinet.shelves.flatMap(shelf => shelf.dispensers || [])
     : [];
+
+
+  // Вычисляем размеры сетки на основе структуры шкафа
+  const getGridDimensions = () => {
+    if (!selectedCabinet || !selectedCabinet.shelves || selectedCabinet.shelves.length === 0) {
+      return { rowCount: 6, columnCount: 8 };
+    }
+
+    // Количество строк = количество полок
+    const rowCount = selectedCabinet.shelves.length;
+
+    // Количество столбцов = максимальное количество пушеров на полке
+    const columnCount = Math.max(
+      ...selectedCabinet.shelves.map(shelf => shelf.dispensers ? shelf.dispensers.length : 0),
+      8 // минимум 8 столбцов
+    );
+
+    return { rowCount, columnCount };
+  };
+
+  const { rowCount, columnCount } = getGridDimensions();
+
+  // Используем отслеживаемое значение mapping
+  const currentMapping = mappingValue;
+
+  // Обработчик клика на пушер в сетке
+  const handleDispenserClick = (dispenserId) => {
+    setSelectedDispenserId(dispenserId);
+    const currentSku = currentMapping[dispenserId] || 0;
+    modalForm.setFieldsValue({
+      sku: currentSku === 0 ? undefined : currentSku,
+      skuInput: currentSku === 0 ? undefined : currentSku
+    });
+    setModalVisible(true);
+  };
+
+  // Функция для обновления mapping (используется и при изменении, и при сохранении)
+  const updateMapping = (skuValue) => {
+    if (selectedDispenserId === null) return;
+
+    // Обновляем значение в форме
+    const currentMapping = form.getFieldValue('mapping') || {};
+    const newMapping = {
+      ...currentMapping,
+      [selectedDispenserId]: skuValue
+    };
+
+    form.setFieldValue({
+      mapping: newMapping
+    });
+
+    // Принудительно обновляем состояние для визуализации
+    setMappingUpdateKey(prev => prev + 1);
+  };
+
+  // Обработчик изменения SKU в реальном времени
+  const handleSkuChange = (value) => {
+    const skuValue = value !== undefined && value !== null ? value : 0;
+    updateMapping(skuValue);
+  };
+
+  // Обработчик сохранения SKU из модалки
+  const handleModalSave = () => {
+    modalForm.validateFields().then((values) => {
+      // Получаем значение из Select или InputNumber (приоритет у InputNumber, если заполнен)
+      const skuValue = values.skuInput !== undefined && values.skuInput !== null
+        ? values.skuInput
+        : (values.sku !== undefined && values.sku !== null ? values.sku : 0);
+
+      // Обновляем значение (если еще не обновлено)
+      updateMapping(skuValue);
+
+      setModalVisible(false);
+      setSelectedDispenserId(null);
+      modalForm.resetFields();
+      message.success('SKU обновлен');
+    }).catch(() => {
+      // Ошибка валидации
+    });
+  };
+
+  // Обработчик закрытия модалки
+  const handleModalCancel = () => {
+    setModalVisible(false);
+    setSelectedDispenserId(null);
+    modalForm.resetFields();
+  };
 
   if (loading) {
     return (
@@ -238,31 +346,24 @@ export default function PlanogramForm() {
           {selectedCabinet && allDispensers.length > 0 && (
             <>
               <Divider orientation="left" style={{ marginTop: 32, marginBottom: 24 }}>
-                <Typography.Text strong>Маппинг пушеров в СКЮ</Typography.Text>
+                <Typography.Text strong>Визуализация планограммы</Typography.Text>
                 <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-                  (0 означает, что пушер должен быть пустым)
+                  (кликните на ячейку для редактирования)
                 </Typography.Text>
               </Divider>
 
-              <Row gutter={[16, 16]}>
-                {allDispensers.map(dispenser => (
-                  <Col xs={12} sm={8} md={6} lg={4} xl={3} key={dispenser.id}>
-                    <Form.Item
-                      name={['mapping', dispenser.id]}
-                      label={<span style={{ fontSize: 13 }}>Пушер #{dispenser.id}</span>}
-                      initialValue={0}
-                      style={{ marginBottom: 0 }}
-                    >
-                      <InputNumber
-                        min={0}
-                        placeholder="СКЮ"
-                        style={{ width: '100%' }}
-                        parser={(value) => value ? value.replace(/\D/g, '') : ''}
-                      />
-                    </Form.Item>
-                  </Col>
-                ))}
-              </Row>
+              <div style={{ marginBottom: 24 }}>
+                <ShowcaseGrid
+                  key={mappingUpdateKey}
+                  rowCount={rowCount}
+                  columnCount={columnCount}
+                  mapping={currentMapping}
+                  discrepancies={{}}
+                  onDispenserClick={handleDispenserClick}
+                  dispensers={allDispensers}
+                />
+              </div>
+
             </>
           )}
 
@@ -290,6 +391,75 @@ export default function PlanogramForm() {
           </Form.Item>
         </Form>
       </Card>
+
+      {/* Модальное окно для редактирования SKU */}
+      <Modal
+        title={`Редактирование пушера #${selectedDispenserId}`}
+        open={modalVisible}
+        onOk={handleModalSave}
+        onCancel={handleModalCancel}
+        okText="Сохранить"
+        cancelText="Отмена"
+        width={500}
+      >
+        <Form
+          form={modalForm}
+          layout="vertical"
+          initialValues={{ sku: undefined }}
+        >
+          <Form.Item
+            name="sku"
+            label="СКЮ"
+            tooltip="Выберите SKU из списка или введите вручную. 0 означает, что пушер должен быть пустым."
+          >
+            <Select
+              showSearch
+              allowClear
+              placeholder="Выберите SKU"
+              optionFilterProp="label"
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              notFoundContent={null}
+              onChange={(value) => {
+                // Синхронизируем с InputNumber
+                modalForm.setFieldValue('skuInput', value !== undefined && value !== null ? value : undefined);
+                // Обновляем mapping сразу при изменении
+                handleSkuChange(value);
+              }}
+            >
+              <Select.Option value={0}>Пусто (0)</Select.Option>
+              {availableSkus.map(sku => (
+                <Select.Option key={sku.value} value={sku.value}>
+                  {sku.label}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="skuInput"
+            label="Или введите SKU вручную"
+          >
+            <InputNumber
+              min={0}
+              placeholder="Введите SKU ID"
+              style={{ width: '100%' }}
+              onChange={(value) => {
+                // Синхронизируем с Select
+                modalForm.setFieldValue('sku', value !== null && value !== undefined ? value : undefined);
+                // Обновляем mapping сразу при изменении
+                handleSkuChange(value);
+              }}
+              onPressEnter={handleModalSave}
+            />
+          </Form.Item>
+
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            Текущее значение: {currentMapping[selectedDispenserId] !== undefined ? currentMapping[selectedDispenserId] : 0}
+          </Typography.Text>
+        </Form>
+      </Modal>
     </div>
   );
 }
