@@ -6,7 +6,8 @@ import './MainLayout.css';
 const { Header, Content } = Layout;
 const { Title } = Typography;
 
-export default function MainLayout({ onLogout }) {
+// export default function MainLayout({ onLogout }) {
+export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -22,13 +23,13 @@ export default function MainLayout({ onLogout }) {
     navigate(key);
   };
 
-  const handleLogout = () => {
-    if (onLogout) {
-      onLogout();
-    } else {
-      navigate('/login');
-    }
-  };
+  // const handleLogout = () => {
+  //   if (onLogout) {
+  //     onLogout();
+  //   } else {
+  //     navigate('/login');
+  //   }
+  // };
 
   return (
     <Layout className="main-layout">
@@ -50,14 +51,14 @@ export default function MainLayout({ onLogout }) {
                 </button>
               ))}
             </div>
-            <Button
+            {/* <Button
               type="primary"
               danger
               icon={<FaSignOutAlt />}
               onClick={handleLogout}
             >
               Выход
-            </Button>
+            </Button> */}
           </div>
         </div>
       </Header>

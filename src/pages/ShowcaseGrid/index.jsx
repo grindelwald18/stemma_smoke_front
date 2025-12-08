@@ -1,22 +1,8 @@
-import React from 'react';
 import { Typography } from 'antd';
 import './style.css';
 
 const { Text } = Typography;
 
-/**
- * Компонент-сетка для витрины с товарами (планограмма).
- * Отображает сетку пушеров с визуализацией товаров и статусов.
- *
- * @param {object} props - Свойства компонента.
- * @param {number} props.rowCount - Количество строк в витрине (по умолчанию 6).
- * @param {number} props.columnCount - Количество столбцов в витрине (по умолчанию 8).
- * @param {object} props.mapping - Маппинг пушеров в СКЮ (dispenser_id -> sku_id).
- * @param {object} props.discrepancies - Объект несоответствий (dispenser_id -> true).
- * @param {function} props.onDispenserClick - Callback при клике на пушер (опционально).
- * @param {Array} props.dispensers - Массив пушеров с их позициями (опционально).
- * @returns {JSX.Element} - Элемент JSX, представляющий витрину.
- */
 const ShowcaseGrid = ({
     rowCount = 6,
     columnCount = 8,
@@ -25,13 +11,10 @@ const ShowcaseGrid = ({
     onDispenserClick,
     dispensers = null
 }) => {
-    // Создаем матрицу для отображения пушеров
     const createGridMatrix = () => {
         const matrix = [];
 
         if (dispensers && Array.isArray(dispensers)) {
-            // Если передан массив пушеров, используем их реальные позиции
-            // Создаем маппинг dispenser_id -> позиция (row, col)
             const dispenserMap = new Map();
             let currentRow = 0;
             let currentCol = 0;
@@ -45,11 +28,9 @@ const ShowcaseGrid = ({
                 }
             });
 
-            // Заполняем матрицу
             for (let row = 0; row < rowCount; row++) {
                 matrix[row] = [];
                 for (let col = 0; col < columnCount; col++) {
-                    // Находим пушер для этой позиции
                     let dispenserId = null;
                     for (const [id, pos] of dispenserMap.entries()) {
                         if (pos.row === row && pos.col === col) {
@@ -61,7 +42,6 @@ const ShowcaseGrid = ({
                 }
             }
         } else {
-            // Стандартная логика - последовательная нумерация
             let index = 0;
             for (let row = 0; row < rowCount; row++) {
                 matrix[row] = [];
@@ -76,31 +56,127 @@ const ShowcaseGrid = ({
 
     const gridMatrix = createGridMatrix();
 
-    // Определяем статус ячейки
+
+    const getSkuData = (dispenserId) => {
+        if (dispenserId === null || dispenserId === undefined) {
+            return null;
+        }
+
+        const stringKey = String(dispenserId);
+        let value = null;
+
+        if (Object.prototype.hasOwnProperty.call(mapping, stringKey)) {
+            value = mapping[stringKey];
+        } else if (Object.prototype.hasOwnProperty.call(mapping, dispenserId)) {
+            value = mapping[dispenserId];
+        }
+
+        if (value === null || value === undefined) {
+            return null;
+        }
+
+        if (typeof value === 'object' && 'id' in value) {
+            return value;
+        }
+
+        const numericId = typeof value === 'number' ? value : parseInt(value);
+        return {
+            id: numericId,
+            name: null,
+            image: null
+        };
+    };
+
+    const isEmptySku = (skuData) => {
+        if (!skuData) return true;
+        if (skuData.id === null || skuData.id === undefined) return true;
+        return false;
+    };
+
+    const shouldShowPlaceholder = (skuData) => {
+        if (!skuData) return true;
+        if (!skuData.image || skuData.image === null) {
+            return true;
+        }
+        if (typeof skuData.image === 'string') {
+            const trimmed = skuData.image.trim();
+            if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined') {
+                return true;
+            }
+            return false;
+        }
+        return true;
+    };
+
     const getCellStatus = (dispenserId) => {
         if (dispenserId === null) return 'empty';
 
-        const skuId = mapping[dispenserId];
-        const hasDiscrepancy = discrepancies[dispenserId];
+        const skuData = getSkuData(dispenserId);
+        const hasDiscrepancy = discrepancies[dispenserId] || discrepancies[String(dispenserId)];
 
         if (hasDiscrepancy) {
-            return 'error'; // Красная граница - несоответствие
+            return 'error';
         }
-        if (skuId && skuId !== 0) {
-            return 'success'; // Зеленая граница - правильно заполненный
+        if (skuData && skuData.id === 0 && skuData.name === "Пусто") {
+            return 'default';
         }
-        return 'default'; // Серая граница - пустой или нейтральный
+        if (skuData && !isEmptySku(skuData) && skuData.id !== 0) {
+            return 'success';
+        }
+        return 'default';
     };
 
-    // Получаем текст для отображения
     const getCellText = (dispenserId) => {
         if (dispenserId === null) return '';
 
-        const skuId = mapping[dispenserId];
-        if (skuId && skuId !== 0) {
-            return `SKU: ${skuId}`;
+        const skuData = getSkuData(dispenserId);
+        if (!skuData) return 'SMOKING KILLS';
+
+        if (skuData.id === 0 && skuData.name === "Пусто") {
+            return String(skuData.name || 'Пусто');
+        }
+        if (skuData.id !== 0 && skuData.id !== null && skuData.id !== undefined) {
+            return `SKU: ${skuData.id}`;
         }
         return 'SMOKING KILLS';
+    };
+
+    const getImageSrc = (skuData) => {
+        if (!skuData) {
+            return '/image.png';
+        }
+
+        if (skuData.image && typeof skuData.image === 'string') {
+            const trimmedImage = skuData.image.trim();
+
+            if (trimmedImage === '' || trimmedImage === 'null' || trimmedImage === 'undefined') {
+                return '/image.png';
+            }
+
+            if (trimmedImage.startsWith('data:')) {
+                return trimmedImage;
+            }
+
+            const cleanBase64 = trimmedImage.replace(/\s/g, '');
+
+            if (cleanBase64 === '') {
+                return '/image.png';
+            }
+
+            let mimeType = 'image/jpeg';
+            if (cleanBase64.startsWith('/9j/') || cleanBase64.startsWith('i/9j/')) {
+                mimeType = 'image/jpeg';
+            } else if (cleanBase64.startsWith('iVBORw0KGgo')) {
+                mimeType = 'image/png';
+            } else if (cleanBase64.startsWith('R0lGODlh') || cleanBase64.startsWith('R0lGODdh')) {
+                mimeType = 'image/gif';
+            }
+
+            const dataUrl = `data:${mimeType};base64,${cleanBase64}`;
+            return dataUrl;
+        }
+
+        return '/image.png';
     };
 
     return (
@@ -115,9 +191,11 @@ const ShowcaseGrid = ({
             >
                 {gridMatrix.flatMap((row, rowIndex) =>
                     row.map((dispenserId, colIndex) => {
-                        const isEmpty = dispenserId === null || !mapping[dispenserId] || mapping[dispenserId] === 0;
+                        const skuData = getSkuData(dispenserId);
+                        const isEmpty = dispenserId === null || isEmptySku(skuData);
                         const status = getCellStatus(dispenserId);
                         const cellText = getCellText(dispenserId);
+                        const imageSrc = getImageSrc(skuData);
 
                         return (
                             <div
@@ -130,8 +208,7 @@ const ShowcaseGrid = ({
                             >
                                 {dispenserId !== null ? (
                                     <div className="showcase-item-content">
-                                        {/* Иконка пушера */}
-                                        <div className="dispenser-icon">
+                                        {/* <div className="dispenser-icon">
                                             <svg
                                                 width="14"
                                                 height="14"
@@ -147,14 +224,15 @@ const ShowcaseGrid = ({
                                                     strokeLinejoin="round"
                                                 />
                                             </svg>
-                                        </div>
+                                        </div> */}
 
                                         {/* Изображение пачки */}
                                         <div className={`cigarette-pack ${isEmpty ? 'empty' : ''}`}>
                                             <img
-                                                src="/image.png"
-                                                alt="Cigarette pack"
+                                                src={imageSrc}
+                                                alt={skuData?.name ? String(skuData.name) : "Cigarette pack"}
                                                 className="cigarette-pack-image"
+                                                onError={(e) => { e.target.src = '/image.png'; }}
                                             />
                                         </div>
 
@@ -164,7 +242,7 @@ const ShowcaseGrid = ({
                                                 type={isEmpty ? "secondary" : "default"}
                                                 style={{ fontSize: '8px', textAlign: 'center', lineHeight: '1.2' }}
                                             >
-                                                {cellText}
+                                                {typeof cellText === 'string' ? cellText : String(cellText || '')}
                                             </Text>
                                         </div>
                                     </div>

@@ -4,18 +4,17 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import PlanogramList from './pages/PlanogramList.jsx';
 import PlanogramForm from './pages/PlanogramForm.jsx';
 import MainLayout from './layouts/MainLayout.jsx';
-import ShowcaseGrid from './pages/ShowcaseGrid/index.jsx';
 import { Navigate } from 'react-router-dom';
 
 export const router = createBrowserRouter([
-    {
-        path: "/login",
-        element: <LoginPage />
-    },
-    {
-        path: "/register",
-        element: <RegisterPage />
-    },
+    // {
+    //     path: "/login",
+    //     element: <LoginPage />
+    // },
+    // {
+    //     path: "/register",
+    //     element: <RegisterPage />
+    // },
     {
         element: <MainLayout />,
         children: [

@@ -16,13 +16,9 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
 
-    // Имитация запроса к API
     try {
-      // Здесь будет запрос к API для регистрации
-      console.log('Register attempt:', { username: values.username, email: values.email });
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // После успешной регистрации перенаправляем на страницу авторизации
+
       message.success('Регистрация успешна!');
       navigate('/login');
     } catch (err) {

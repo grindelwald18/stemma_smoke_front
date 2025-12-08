@@ -1,4 +1,3 @@
-// Моковые данные согласно структуре бэкенда
 const row_width = 66;
 const dispensers_per_shelf = 8;
 const shelf_count = 6;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Form,
@@ -20,12 +20,10 @@ import {
 import { FaArrowLeft, FaSave } from 'react-icons/fa';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ru';
-import { planogramService } from '../services/planogramService.js';
-import { cabinetService } from '../services/cabinetService.js';
+import { usePlanogramStore, useCabinetStore, useSkuStore } from '../stores';
 import ShowcaseGrid from './ShowcaseGrid/index.jsx';
 import './PlanogramForm.css';
 
-// Устанавливаем русскую локаль для dayjs
 dayjs.locale('ru');
 
 const { Title, Text } = Typography;
@@ -36,85 +34,109 @@ export default function PlanogramForm() {
   const isEdit = !!id;
   const [form] = Form.useForm();
 
-  const [loading, setLoading] = useState(true);
+  const {
+    loading: planogramLoading,
+    error: planogramError,
+    fetchPlanogramById,
+    createPlanogram,
+    updatePlanogram
+  } = usePlanogramStore();
+
+  const {
+    cabinets,
+    currentCabinet,
+    loading: cabinetLoading,
+    fetchCabinets,
+    fetchCabinetById,
+    setCurrentCabinet
+  } = useCabinetStore();
+
+  const {
+    skus,
+    loading: skuLoading,
+    fetchSkus
+  } = useSkuStore();
+
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
+  const selectedCabinet = currentCabinet;
 
-  const [cabinets, setCabinets] = useState([]);
-  const [selectedCabinet, setSelectedCabinet] = useState(null);
-
-  // Состояние для модалки редактирования SKU
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDispenserId, setSelectedDispenserId] = useState(null);
   const [modalForm] = Form.useForm();
   const [mappingUpdateKey, setMappingUpdateKey] = useState(0);
 
-  // Отслеживаем изменения mapping для обновления визуализации
-  const mappingValue = Form.useWatch('mapping', form) || {};
 
-  // Моковый список доступных SKU (в реальном приложении будет загружаться с сервера)
-  const availableSkus = [
-    { value: 1, label: 'SKU 1' },
-    { value: 2, label: 'SKU 2' },
-    { value: 3, label: 'SKU 3' },
-    { value: 4, label: 'SKU 4' },
-    { value: 5, label: 'SKU 5' },
-  ];
+  const [mappingValue, setMappingValue] = useState({});
+
+  const availableSkus = React.useMemo(() => {
+    return skus.map(sku => ({
+      value: sku.id,
+      label: sku.name || `SKU ${sku.id}`,
+      name: sku.name,
+      id: sku.id,
+      image: sku.image || null
+    }));
+  }, [skus]);
+
+  const [selectedSkuInModal, setSelectedSkuInModal] = React.useState(null);
 
   useEffect(() => {
-    loadCabinets();
+    fetchCabinets();
+    fetchSkus();
+
     if (isEdit) {
       loadPlanogram();
-    } else {
-      setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  const loadCabinets = async () => {
-    try {
-      const data = await cabinetService.getAll();
-      setCabinets(data);
-    } catch (err) {
-      console.error('Ошибка при загрузке шкафов:', err);
-    }
-  };
 
   const loadPlanogram = async () => {
     try {
-      setLoading(true);
-      const planogram = await planogramService.getById(id);
+      const planogram = await fetchPlanogramById(id);
       if (!planogram) {
-        setError('Планограмма не найдена');
-        message.error('Планограмма не найдена');
         return;
       }
 
-      const cabinet = await cabinetService.getById(planogram.cabinet_id);
-      setSelectedCabinet(cabinet);
+      if (planogram.cabinet) {
+        setCurrentCabinet(planogram.cabinet);
+      } else if (planogram.cabinet_id) {
+        const cabinet = await fetchCabinetById(planogram.cabinet_id);
+        if (cabinet) {
+          setCurrentCabinet(cabinet);
+        }
+      }
 
-      // Устанавливаем значения формы
+      const normalizedMapping = {};
+      if (planogram.mapping) {
+        Object.keys(planogram.mapping).forEach(key => {
+          const numKey = parseInt(key);
+          if (!isNaN(numKey)) {
+            normalizedMapping[numKey] = planogram.mapping[key];
+          }
+        });
+      }
+
       form.setFieldsValue({
         cabinet_id: planogram.cabinet_id,
         timestamp: dayjs(planogram.timestamp),
-        mapping: planogram.mapping
+        mapping: normalizedMapping
       });
+
+      setMappingValue(normalizedMapping);
+
+      setTimeout(() => {
+        setMappingUpdateKey(prev => prev + 1);
+      }, 100);
     } catch (err) {
-      setError('Ошибка при загрузке планограммы');
-      message.error('Ошибка при загрузке планограммы');
-      console.error(err);
-    } finally {
-      setLoading(false);
+      console.error('Ошибка при загрузке планограммы:', err);
     }
   };
 
   const handleCabinetChange = async (cabinetId) => {
     if (cabinetId) {
-      const cabinet = await cabinetService.getById(cabinetId);
-      setSelectedCabinet(cabinet);
-
-      // Инициализируем маппинг для всех пушеров пустыми значениями
+      const cabinet = await fetchCabinetById(cabinetId);
       if (cabinet) {
+        setCurrentCabinet(cabinet);
+
         const currentMapping = form.getFieldValue('mapping') || {};
         const newMapping = {};
         cabinet.shelves.forEach(shelf => {
@@ -123,74 +145,108 @@ export default function PlanogramForm() {
           });
         });
         form.setFieldValue('mapping', newMapping);
+        setMappingValue(newMapping);
       }
     } else {
-      setSelectedCabinet(null);
+      setCurrentCabinet(null);
       form.setFieldValue('mapping', {});
+      setMappingValue({});
     }
   };
 
   const handleSubmit = async (values) => {
     setSaving(true);
-    setError(null);
 
     try {
-      // Преобразуем dayjs в Date
+      if (!selectedCabinet) {
+        message.error('Пожалуйста, выберите шкаф');
+        setSaving(false);
+        return;
+      }
+
       const timestamp = values.timestamp ? (dayjs.isDayjs(values.timestamp) ? values.timestamp.toDate() : new Date(values.timestamp)) : new Date();
 
-      // Очищаем маппинг от undefined значений
       const mapping = {};
-      if (values.mapping) {
-        Object.keys(values.mapping).forEach(key => {
-          const value = values.mapping[key];
-          mapping[key] = value !== undefined && value !== null ? parseInt(value) || 0 : 0;
-        });
+
+      const allDispensers = selectedCabinet.shelves.flatMap(shelf => shelf.dispensers || []);
+
+      const formMappingFromForm = form.getFieldValue('mapping') || {};
+      const formMappingFromState = mappingValue || {};
+
+      const formMapping = { ...formMappingFromForm, ...formMappingFromState };
+
+      allDispensers.forEach(dispenser => {
+        const dispenserId = dispenser.id;
+
+        let value = formMappingFromState[dispenserId];
+        if (value === undefined || value === null) {
+          value = formMappingFromState[String(dispenserId)];
+        }
+        if (value === undefined || value === null) {
+          value = formMappingFromForm[dispenserId];
+        }
+        if (value === undefined || value === null) {
+          value = formMappingFromForm[String(dispenserId)];
+        }
+        if (value === undefined || value === null) {
+          value = formMapping[dispenserId] ?? formMapping[String(dispenserId)];
+        }
+
+        let normalizedValue = 0;
+        if (value !== undefined && value !== null) {
+          if (typeof value === 'object' && 'id' in value) {
+            normalizedValue = parseInt(value.id) || 0;
+          } else {
+            normalizedValue = parseInt(value) || 0;
+          }
+        }
+        mapping[String(dispenserId)] = normalizedValue;
+      });
+
+      const cabinetToSend = currentCabinet || selectedCabinet;
+
+      if (!cabinetToSend) {
+        message.error('Ошибка: объект шкафа не найден. Пожалуйста, выберите шкаф.');
+        setSaving(false);
+        return;
       }
 
       const planogram = {
         id: isEdit ? parseInt(id) : 0,
         cabinet_id: values.cabinet_id,
+        cabinet: cabinetToSend,
         timestamp: timestamp,
         mapping: mapping
       };
 
       if (isEdit) {
-        await planogramService.update(id, planogram);
-        message.success('Планограмма успешно обновлена');
+        await updatePlanogram(id, planogram, skus);
       } else {
-        await planogramService.create(planogram);
-        message.success('Планограмма успешно создана');
+        await createPlanogram(planogram, skus);
       }
 
       navigate('/planograms');
     } catch (err) {
-      setError('Ошибка при сохранении планограммы');
-      message.error('Ошибка при сохранении планограммы');
       console.error(err);
     } finally {
       setSaving(false);
     }
   };
 
-  // Получаем все пушеры из всех полок выбранного шкафа
   const allDispensers = selectedCabinet
     ? selectedCabinet.shelves.flatMap(shelf => shelf.dispensers || [])
     : [];
 
 
-  // Вычисляем размеры сетки на основе структуры шкафа
   const getGridDimensions = () => {
     if (!selectedCabinet || !selectedCabinet.shelves || selectedCabinet.shelves.length === 0) {
       return { rowCount: 6, columnCount: 8 };
     }
-
-    // Количество строк = количество полок
     const rowCount = selectedCabinet.shelves.length;
 
-    // Количество столбцов = максимальное количество пушеров на полке
     const columnCount = Math.max(
       ...selectedCabinet.shelves.map(shelf => shelf.dispensers ? shelf.dispensers.length : 0),
-      8 // минимум 8 столбцов
+      8
     );
 
     return { rowCount, columnCount };
@@ -198,13 +254,46 @@ export default function PlanogramForm() {
 
   const { rowCount, columnCount } = getGridDimensions();
 
-  // Используем отслеживаемое значение mapping
-  const currentMapping = mappingValue;
+  const currentMapping = React.useMemo(() => {
+    const mapping = mappingValue || {};
+    const normalized = {};
 
-  // Обработчик клика на пушер в сетке
+    Object.keys(mapping).forEach(key => {
+      const numKey = parseInt(key);
+      if (!isNaN(numKey)) {
+        normalized[numKey] = mapping[key];
+        normalized[String(numKey)] = mapping[key];
+      } else {
+        normalized[key] = mapping[key];
+      }
+    });
+
+    return normalized;
+  }, [mappingValue]);
+
   const handleDispenserClick = (dispenserId) => {
     setSelectedDispenserId(dispenserId);
-    const currentSku = currentMapping[dispenserId] || 0;
+    const currentSkuValue = currentMapping[dispenserId] || currentMapping[String(dispenserId)] || 0;
+
+    let currentSku = 0;
+    if (currentSkuValue !== undefined && currentSkuValue !== null) {
+      if (typeof currentSkuValue === 'object' && 'id' in currentSkuValue) {
+        currentSku = currentSkuValue.id || 0;
+        if (currentSkuValue.image) {
+          setSelectedSkuInModal({ id: currentSku, image: currentSkuValue.image, name: currentSkuValue.name });
+        } else {
+          const skuData = availableSkus.find(s => s.value === currentSku);
+          setSelectedSkuInModal(skuData || null);
+        }
+      } else {
+        currentSku = parseInt(currentSkuValue) || 0;
+        const skuData = availableSkus.find(s => s.value === currentSku);
+        setSelectedSkuInModal(skuData || null);
+      }
+    } else {
+      setSelectedSkuInModal(null);
+    }
+
     modalForm.setFieldsValue({
       sku: currentSku === 0 ? undefined : currentSku,
       skuInput: currentSku === 0 ? undefined : currentSku
@@ -212,57 +301,115 @@ export default function PlanogramForm() {
     setModalVisible(true);
   };
 
-  // Функция для обновления mapping (используется и при изменении, и при сохранении)
   const updateMapping = (skuValue) => {
     if (selectedDispenserId === null) return;
 
-    // Обновляем значение в форме
-    const currentMapping = form.getFieldValue('mapping') || {};
+    const currentMapping = mappingValue || form.getFieldValue('mapping') || {};
+
+    let skuDataToSave = null;
+    if (skuValue !== undefined && skuValue !== null && skuValue !== 0) {
+      if (selectedSkuInModal && selectedSkuInModal.id === skuValue) {
+        skuDataToSave = {
+          id: selectedSkuInModal.id,
+          name: selectedSkuInModal.name || null,
+          image: selectedSkuInModal.image || null
+        };
+      } else {
+        const skuFromList = availableSkus.find(s => s.value === skuValue);
+        if (skuFromList) {
+          skuDataToSave = {
+            id: skuFromList.id,
+            name: skuFromList.name || null,
+            image: skuFromList.image || null
+          };
+        } else {
+          skuDataToSave = {
+            id: skuValue,
+            name: null,
+            image: null
+          };
+        }
+      }
+    } else {
+      skuDataToSave = {
+        id: 0,
+        name: "Пусто",
+        image: null
+      };
+    }
+
     const newMapping = {
       ...currentMapping,
-      [selectedDispenserId]: skuValue
+      [selectedDispenserId]: skuDataToSave,
+      [String(selectedDispenserId)]: skuDataToSave
     };
 
     form.setFieldValue({
       mapping: newMapping
     });
 
-    // Принудительно обновляем состояние для визуализации
+    setMappingValue(newMapping);
     setMappingUpdateKey(prev => prev + 1);
+
   };
 
-  // Обработчик изменения SKU в реальном времени
-  const handleSkuChange = (value) => {
+  const handleSkuChange = (value, skuData = null) => {
     const skuValue = value !== undefined && value !== null ? value : 0;
+    if (skuData) {
+      setSelectedSkuInModal(skuData);
+    }
     updateMapping(skuValue);
   };
 
-  // Обработчик сохранения SKU из модалки
   const handleModalSave = () => {
     modalForm.validateFields().then((values) => {
-      // Получаем значение из Select или InputNumber (приоритет у InputNumber, если заполнен)
       const skuValue = values.skuInput !== undefined && values.skuInput !== null
         ? values.skuInput
         : (values.sku !== undefined && values.sku !== null ? values.sku : 0);
 
-      // Обновляем значение (если еще не обновлено)
       updateMapping(skuValue);
 
       setModalVisible(false);
       setSelectedDispenserId(null);
+      setSelectedSkuInModal(null);
       modalForm.resetFields();
       message.success('SKU обновлен');
     }).catch(() => {
-      // Ошибка валидации
     });
   };
 
-  // Обработчик закрытия модалки
   const handleModalCancel = () => {
     setModalVisible(false);
     setSelectedDispenserId(null);
+    setSelectedSkuInModal(null);
     modalForm.resetFields();
   };
+
+  const getImageSrc = (skuData) => {
+    if (!skuData || !skuData.image) {
+      return '/image.png';
+    }
+
+    const image = skuData.image;
+    if (typeof image === 'string' && image.startsWith('data:')) {
+      return image;
+    }
+
+    const cleanBase64 = image.trim().replace(/\s/g, '');
+
+    let mimeType = 'image/jpeg';
+    if (cleanBase64.startsWith('/9j/') || cleanBase64.startsWith('i/9j/')) {
+      mimeType = 'image/jpeg';
+    } else if (cleanBase64.startsWith('iVBORw0KGgo')) {
+      mimeType = 'image/png';
+    } else if (cleanBase64.startsWith('R0lGODlh') || cleanBase64.startsWith('R0lGODdh')) {
+      mimeType = 'image/gif';
+    }
+
+    return `data:${mimeType};base64,${cleanBase64}`;
+  };
+
+  const loading = planogramLoading || cabinetLoading || skuLoading;
 
   if (loading) {
     return (
@@ -284,10 +431,10 @@ export default function PlanogramForm() {
         </Button>
       </div>
 
-      {error && (
+      {planogramError && (
         <Alert
           message="Ошибка"
-          description={error}
+          description={planogramError}
           type="error"
           showIcon
           closable
@@ -392,7 +539,6 @@ export default function PlanogramForm() {
         </Form>
       </Card>
 
-      {/* Модальное окно для редактирования SKU */}
       <Modal
         title={`Редактирование пушера #${selectedDispenserId}`}
         open={modalVisible}
@@ -417,23 +563,42 @@ export default function PlanogramForm() {
               allowClear
               placeholder="Выберите SKU"
               optionFilterProp="label"
-              filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-              }
+              filterOption={(input, option) => {
+                const searchText = input.toLowerCase();
+                const label = (option?.label ?? '').toLowerCase();
+                const name = (option?.name ?? '').toLowerCase();
+                const id = String(option?.id ?? '').toLowerCase();
+
+                return label.includes(searchText) ||
+                  name.includes(searchText) ||
+                  id.includes(searchText);
+              }}
               notFoundContent={null}
               onChange={(value) => {
-                // Синхронизируем с InputNumber
                 modalForm.setFieldValue('skuInput', value !== undefined && value !== null ? value : undefined);
-                // Обновляем mapping сразу при изменении
-                handleSkuChange(value);
+                if (value !== undefined && value !== null && value !== 0) {
+                  const skuData = availableSkus.find(s => s.value === value);
+                  setSelectedSkuInModal(skuData || null);
+                  handleSkuChange(value, skuData || null);
+                } else {
+                  setSelectedSkuInModal(null);
+                  handleSkuChange(value, null);
+                }
               }}
             >
-              <Select.Option value={0}>Пусто (0)</Select.Option>
-              {availableSkus.map(sku => (
-                <Select.Option key={sku.value} value={sku.value}>
-                  {sku.label}
-                </Select.Option>
-              ))}
+              <Select.Option value={0} name="Пусто" id={0}>Пусто (0)</Select.Option>
+              {availableSkus
+                .filter(sku => sku.value !== 0)
+                .map(sku => (
+                  <Select.Option
+                    key={sku.value}
+                    value={sku.value}
+                    name={sku.name}
+                    id={sku.id}
+                  >
+                    {sku.label}
+                  </Select.Option>
+                ))}
             </Select>
           </Form.Item>
 
@@ -446,18 +611,54 @@ export default function PlanogramForm() {
               placeholder="Введите SKU ID"
               style={{ width: '100%' }}
               onChange={(value) => {
-                // Синхронизируем с Select
                 modalForm.setFieldValue('sku', value !== null && value !== undefined ? value : undefined);
-                // Обновляем mapping сразу при изменении
-                handleSkuChange(value);
+                if (value !== null && value !== undefined && value !== 0) {
+                  const skuData = availableSkus.find(s => s.value === value);
+                  setSelectedSkuInModal(skuData || null);
+                  handleSkuChange(value, skuData || null);
+                } else {
+                  setSelectedSkuInModal(null);
+                  handleSkuChange(value, null);
+                }
               }}
               onPressEnter={handleModalSave}
             />
           </Form.Item>
 
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Текущее значение: {currentMapping[selectedDispenserId] !== undefined ? currentMapping[selectedDispenserId] : 0}
+            Текущее значение: {(() => {
+              const currentValue = currentMapping[selectedDispenserId] || currentMapping[String(selectedDispenserId)];
+              if (currentValue === undefined || currentValue === null) return 0;
+              if (typeof currentValue === 'object' && 'id' in currentValue) {
+                return currentValue.id || 0;
+              }
+              return currentValue;
+            })()}
           </Typography.Text>
+
+          {selectedSkuInModal && selectedSkuInModal.image && (
+            <div style={{ marginTop: 16, textAlign: 'center' }}>
+              <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+                Изображение товара:
+              </Typography.Text>
+              <img
+                src={getImageSrc(selectedSkuInModal)}
+                alt={selectedSkuInModal.name || 'SKU image'}
+                style={{
+                  maxWidth: '200px',
+                  maxHeight: '200px',
+                  objectFit: 'contain',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '4px',
+                  padding: '8px',
+                  backgroundColor: '#fafafa'
+                }}
+                onError={(e) => {
+                  e.target.src = '/image.png';
+                }}
+              />
+            </div>
+          )}
         </Form>
       </Modal>
     </div>
