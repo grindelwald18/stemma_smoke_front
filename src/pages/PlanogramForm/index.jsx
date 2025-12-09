@@ -20,9 +20,9 @@ import {
 import { FaArrowLeft, FaSave } from 'react-icons/fa';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ru';
-import { usePlanogramStore, useCabinetStore, useSkuStore } from '../stores';
-import ShowcaseGrid from './ShowcaseGrid/index.jsx';
-import './PlanogramForm.css';
+import { usePlanogramStore, useCabinetStore, useSkuStore } from '../../stores';
+import ShowcaseGrid from '../ShowcaseGrid/index.jsx';
+import './style.css';
 
 dayjs.locale('ru');
 
@@ -81,12 +81,23 @@ export default function PlanogramForm() {
   const [selectedSkuInModal, setSelectedSkuInModal] = React.useState(null);
 
   useEffect(() => {
-    fetchCabinets();
-    fetchSkus();
+    // Загружаем шкафы и SKU при монтировании компонента
+    const loadData = async () => {
+      try {
+        // Всегда загружаем шкафы (принудительно при создании, чтобы обновить список)
+        await fetchCabinets(true); // Принудительная загрузка всегда
+        await fetchSkus();
 
-    if (isEdit) {
-      loadPlanogram();
-    }
+        if (isEdit) {
+          await loadPlanogram();
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке данных:', error);
+      }
+    };
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadPlanogram = async () => {
@@ -141,16 +152,39 @@ export default function PlanogramForm() {
         const newMapping = {};
         cabinet.shelves.forEach(shelf => {
           shelf.dispensers.forEach(dispenser => {
-            newMapping[dispenser.id] = currentMapping[dispenser.id] || 0;
+            const existingValue = currentMapping[dispenser.id] || currentMapping[String(dispenser.id)];
+            // Если есть существующее значение, сохраняем его, иначе создаем объект "Пусто"
+            if (existingValue !== undefined && existingValue !== null) {
+              // Если это объект, сохраняем его, иначе создаем объект из числа
+              if (typeof existingValue === 'object' && 'id' in existingValue) {
+                newMapping[dispenser.id] = existingValue;
+                newMapping[String(dispenser.id)] = existingValue;
+              } else {
+                const skuId = parseInt(existingValue) || 0;
+                newMapping[dispenser.id] = skuId;
+                newMapping[String(dispenser.id)] = skuId;
+              }
+            } else {
+              // Инициализируем как "Пусто"
+              const emptySku = {
+                id: 0,
+                name: "Пусто",
+                image: null
+              };
+              newMapping[dispenser.id] = emptySku;
+              newMapping[String(dispenser.id)] = emptySku;
+            }
           });
         });
         form.setFieldValue('mapping', newMapping);
         setMappingValue(newMapping);
+        setMappingUpdateKey(prev => prev + 1);
       }
     } else {
       setCurrentCabinet(null);
       form.setFieldValue('mapping', {});
       setMappingValue({});
+      setMappingUpdateKey(prev => prev + 1);
     }
   };
 
@@ -192,15 +226,28 @@ export default function PlanogramForm() {
           value = formMapping[dispenserId] ?? formMapping[String(dispenserId)];
         }
 
-        let normalizedValue = 0;
+        // Сохраняем полный объект, если он есть, иначе создаем из id
         if (value !== undefined && value !== null) {
           if (typeof value === 'object' && 'id' in value) {
-            normalizedValue = parseInt(value.id) || 0;
+            // Если уже есть полный объект с id, name, image - сохраняем его
+            mapping[String(dispenserId)] = {
+              id: value.id || 0,
+              name: value.name || '',
+              image: value.image !== null && value.image !== undefined ? value.image : ''
+            };
           } else {
-            normalizedValue = parseInt(value) || 0;
+            // Если только число, создаем объект (transformPlanogramToAPI обогатит его из skus)
+            const skuId = parseInt(value) || 0;
+            mapping[String(dispenserId)] = skuId;
           }
+        } else {
+          // Если значение не установлено, создаем объект "Пусто"
+          mapping[String(dispenserId)] = {
+            id: 0,
+            name: "Пусто",
+            image: ''
+          };
         }
-        mapping[String(dispenserId)] = normalizedValue;
       });
 
       const cabinetToSend = currentCabinet || selectedCabinet;
@@ -219,15 +266,32 @@ export default function PlanogramForm() {
         mapping: mapping
       };
 
+      // Логирование для отладки
+      console.log('Отправка планограммы:', {
+        isEdit,
+        id: planogram.id,
+        cabinet_id: planogram.cabinet_id,
+        hasCabinet: !!planogram.cabinet,
+        timestamp: planogram.timestamp,
+        mappingKeys: Object.keys(planogram.mapping),
+        mappingSample: Object.keys(planogram.mapping).slice(0, 3).reduce((acc, key) => {
+          acc[key] = planogram.mapping[key];
+          return acc;
+        }, {})
+      });
+
       if (isEdit) {
         await updatePlanogram(id, planogram, skus);
+        message.success('Планограмма успешно обновлена');
       } else {
         await createPlanogram(planogram, skus);
+        message.success('Планограмма успешно создана');
       }
 
       navigate('/planograms');
     } catch (err) {
       console.error(err);
+      message.error(isEdit ? 'Ошибка при обновлении планограммы' : 'Ошибка при создании планограммы');
     } finally {
       setSaving(false);
     }

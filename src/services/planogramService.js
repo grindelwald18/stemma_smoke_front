@@ -56,15 +56,15 @@ const transformPlanogramToAPI = (planogram, includeId = true, skus = []) => {
         mapping[stringKey] = {
           id: value.id || 0,
           name: value.name || '',
-          image: value.image || ''
+          image: value.image !== null && value.image !== undefined ? String(value.image) : ''
         };
       } else {
         const skuId = value !== undefined && value !== null ? parseInt(value) : 0;
         const skuData = skuMap.get(skuId);
         mapping[stringKey] = {
           id: skuId,
-          name: skuData ? skuData.name : '',
-          image: skuData ? skuData.image : ''
+          name: skuData ? (skuData.name || '') : '',
+          image: skuData ? (skuData.image || '') : ''
         };
       }
     });
@@ -83,8 +83,15 @@ const transformPlanogramToAPI = (planogram, includeId = true, skus = []) => {
     console.warn('Warning: planogram.cabinet is missing, only cabinet_id provided');
   }
 
-  if (includeId && planogram.id && planogram.id !== 0) {
-    apiData.id = planogram.id;
+  // При создании включаем id: 0, при обновлении - только если id > 0
+  if (includeId) {
+    // При обновлении включаем id только если он > 0
+    if (planogram.id && planogram.id !== 0) {
+      apiData.id = planogram.id;
+    }
+  } else {
+    // При создании всегда включаем id: 0
+    apiData.id = 0;
   }
 
   return apiData;
@@ -195,7 +202,7 @@ export const planogramService = {
 
   async delete(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/planogram/${id}/`, {
+      const response = await fetch(`${API_BASE_URL}/planogram/${id}`, {
         method: 'DELETE'
       });
 

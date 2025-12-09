@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Form, Input, Button, Card, Typography, Alert, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import './LoginPage.css';
+import './style.css';
 
 const { Title } = Typography;
 

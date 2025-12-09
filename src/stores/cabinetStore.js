@@ -7,9 +7,10 @@ export const useCabinetStore = create((set, get) => ({
     loading: false,
     error: null,
 
-    fetchCabinets: async () => {
+    fetchCabinets: async (force = false) => {
         const currentCabinets = get().cabinets;
-        if (currentCabinets.length > 0) {
+        // Если не принудительная загрузка и уже есть данные, возвращаем кеш
+        if (!force && currentCabinets.length > 0) {
             return currentCabinets;
         }
 

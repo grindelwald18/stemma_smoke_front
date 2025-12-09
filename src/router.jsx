@@ -1,9 +1,10 @@
 import { createBrowserRouter } from 'react-router-dom';
-import LoginPage from './pages/LoginPage.jsx';
-import RegisterPage from './pages/RegisterPage.jsx';
-import PlanogramList from './pages/PlanogramList.jsx';
-import PlanogramForm from './pages/PlanogramForm.jsx';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import PlanogramList from './pages/PlanogramList';
+import PlanogramForm from './pages/PlanogramForm';
 import MainLayout from './layouts/MainLayout.jsx';
+import NotFoundPage from './pages/NotFoundPage';
 import { Navigate } from 'react-router-dom';
 
 export const router = createBrowserRouter([
@@ -33,6 +34,10 @@ export const router = createBrowserRouter([
             {
                 path: "/",
                 element: <Navigate to="/planograms" replace />
+            },
+            {
+                path: "*",
+                element: <NotFoundPage />
             },
         ]
     }

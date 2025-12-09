@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Button, Space, Typography, Tag, Empty, Spin, Popconfirm, Alert } from 'antd';
 import { FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaTh } from 'react-icons/fa';
-import { usePlanogramStore } from '../stores';
-import './PlanogramList.css';
+import { usePlanogramStore } from '../../stores';
+import './style.css';
 
 const { Title, Text } = Typography;
 
