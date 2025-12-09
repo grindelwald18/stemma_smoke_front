@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Form, Input, Button, Card, Typography, Alert, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import './LoginPage.css';
+import './style.css';
 
 const { Title } = Typography;
 
@@ -16,14 +16,9 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    // Имитация запроса к API
     try {
-      // Здесь будет запрос к API для авторизации
-      // const response = await authService.login(values.username, values.password);
-      console.log('Login attempt:', { username: values.username });
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // После успешной авторизации перенаправляем на главную страницу
       message.success('Успешный вход');
       navigate('/planograms');
     } catch (err) {

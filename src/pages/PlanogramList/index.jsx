@@ -1,50 +1,29 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Card, Button, Space, Typography, Tag, Empty, Spin, message, Popconfirm } from 'antd';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, Button, Space, Typography, Tag, Empty, Spin, Popconfirm, Alert } from 'antd';
 import { FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaTh } from 'react-icons/fa';
-import { planogramService } from '../services/planogramService.js';
-import './PlanogramList.css';
+import { usePlanogramStore } from '../../stores';
+import './style.css';
 
 const { Title, Text } = Typography;
 
 export default function PlanogramList() {
   const navigate = useNavigate();
-  const [planograms, setPlanograms] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+
+  const {
+    planograms,
+    loading,
+    error,
+    fetchPlanograms,
+    deletePlanogram
+  } = usePlanogramStore();
 
   useEffect(() => {
-    loadPlanograms();
-  }, []);
-
-  const loadPlanograms = async () => {
-    try {
-      setLoading(true);
-      const data = await planogramService.getAll();
-      setPlanograms(data);
-      setError(null);
-    } catch (err) {
-      setError('Ошибка при загрузке планограмм');
-      message.error('Ошибка при загрузке планограмм');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchPlanograms();
+  }, [fetchPlanograms]);
 
   const handleDelete = async (id) => {
-    try {
-      const success = await planogramService.delete(id);
-      if (success) {
-        setPlanograms(planograms.filter(p => p.id !== id));
-        message.success('Планограмма успешно удалена');
-      } else {
-        message.error('Не удалось удалить планограмму');
-      }
-    } catch (err) {
-      message.error('Ошибка при удалении планограммы');
-      console.error(err);
-    }
+    await deletePlanogram(id);
   };
 
   const formatDate = (timestamp) => {
@@ -86,8 +65,7 @@ export default function PlanogramList() {
           Создать планограмму
         </Button>
       </div>
-
-      {error && message.error(error)}
+      {error && <Alert message={error} type="error" />}
 
       {planograms.length === 0 ? (
         <Empty
@@ -139,7 +117,7 @@ export default function PlanogramList() {
                 title={
                   <Space>
                     <Text strong>Планограмма #{planogram.id}</Text>
-                    <Tag color="blue">Шкаф {planogram.cabinet_id}</Tag>
+                    <Tag color="blue">Шкаф {planogram.cabinet_id || planogram.cabinet?.id || 'N/A'}</Tag>
                   </Space>
                 }
                 description={

@@ -1,140 +1,223 @@
-// Моковые данные согласно структуре бэкенда
-const now = new Date();
-const tomorrow = new Date(now);
-tomorrow.setDate(tomorrow.getDate() + 1);
-const nextWeek = new Date(now);
-nextWeek.setDate(nextWeek.getDate() + 7);
-const nextMonth = new Date(now);
-nextMonth.setMonth(nextMonth.getMonth() + 1);
+import { API_CONFIG } from '../config/api.js';
 
-let planograms = [
-  {
-    id: 2,
-    cabinet_id: 3,
-    timestamp: now.toISOString(),
-    mapping: {
-      0: 1,
-      1: 1,
-      2: 1,
-      3: 2,
-      4: 2,
-      5: 2,
-      6: 1,
-      7: 1,
-      8: 1,
-      9: 2,
-      10: 2,
-      11: 2,
-    }
-  },
-  {
-    id: 3,
-    cabinet_id: 3,
-    timestamp: tomorrow.toISOString(),
-    mapping: {
-      0: 2,
-      1: 2,
-      2: 2,
-      3: 1,
-      4: 1,
-      5: 1,
-      6: 2,
-      7: 2,
-      8: 2,
-      9: 1,
-      10: 1,
-      11: 1,
-    }
-  },
-  {
-    id: 4,
-    cabinet_id: 3,
-    timestamp: nextWeek.toISOString(),
-    mapping: {
-      0: 3,
-      1: 3,
-      2: 4,
-      3: 4,
-      4: 3,
-      5: 3,
-      6: 4,
-      7: 4,
-      8: 3,
-      9: 3,
-      10: 4,
-      11: 4,
-    }
-  },
-  {
-    id: 5,
-    cabinet_id: 3,
-    timestamp: nextMonth.toISOString(),
-    mapping: {
-      0: 1,
-      1: 0,
-      2: 2,
-      3: 0,
-      4: 1,
-      5: 2,
-      6: 0,
-      7: 1,
-      8: 2,
-      9: 0,
-      10: 1,
-      11: 2,
-    }
+const API_BASE_URL = API_CONFIG.BASE_URL;
+
+const transformPlanogramFromAPI = (apiPlanogram) => {
+  if (!apiPlanogram) {
+    return null;
   }
-];
 
-let nextId = 6;
+  let mapping = {};
+  if (apiPlanogram.mapping) {
+    Object.keys(apiPlanogram.mapping).forEach(key => {
+      const value = apiPlanogram.mapping[key];
+      if (value && typeof value === 'object' && 'id' in value) {
+        mapping[key] = {
+          id: value.id,
+          name: value.name || null,
+          image: value.image || null
+        };
+      } else {
+        mapping[key] = value;
+      }
+    });
+  }
+
+  return {
+    id: apiPlanogram.id,
+    cabinet_id: apiPlanogram.cabinet?.id || null,
+    cabinet: apiPlanogram.cabinet,
+    timestamp: apiPlanogram.timestamp,
+    mapping: mapping
+  };
+};
+
+const transformPlanogramToAPI = (planogram, includeId = true, skus = []) => {
+
+  const skuMap = new Map();
+  if (Array.isArray(skus)) {
+    skus.forEach(sku => {
+      if (sku && sku.id !== undefined) {
+        skuMap.set(sku.id, {
+          name: sku.name || '',
+          image: sku.image || ''
+        });
+      }
+    });
+  }
+
+  const mapping = Object.create(null);
+  if (planogram.mapping) {
+    Object.keys(planogram.mapping).forEach(key => {
+      const stringKey = String(key);
+      const value = planogram.mapping[key];
+
+      if (value && typeof value === 'object' && 'id' in value) {
+        mapping[stringKey] = {
+          id: value.id || 0,
+          name: value.name || '',
+          image: value.image !== null && value.image !== undefined ? String(value.image) : ''
+        };
+      } else {
+        const skuId = value !== undefined && value !== null ? parseInt(value) : 0;
+        const skuData = skuMap.get(skuId);
+        mapping[stringKey] = {
+          id: skuId,
+          name: skuData ? (skuData.name || '') : '',
+          image: skuData ? (skuData.image || '') : ''
+        };
+      }
+    });
+  }
+
+  const apiData = {
+    timestamp: planogram.timestamp instanceof Date
+      ? planogram.timestamp.toISOString()
+      : planogram.timestamp,
+    mapping: mapping
+  };
+
+  if (planogram.cabinet) {
+    apiData.cabinet = planogram.cabinet;
+  } else if (planogram.cabinet_id) {
+    console.warn('Warning: planogram.cabinet is missing, only cabinet_id provided');
+  }
+
+  // При создании включаем id: 0, при обновлении - только если id > 0
+  if (includeId) {
+    // При обновлении включаем id только если он > 0
+    if (planogram.id && planogram.id !== 0) {
+      apiData.id = planogram.id;
+    }
+  } else {
+    // При создании всегда включаем id: 0
+    apiData.id = 0;
+  }
+
+  return apiData;
+};
 
 export const planogramService = {
   async getAll() {
-    return Promise.resolve([...planograms]);
+    try {
+      const response = await fetch(`${API_BASE_URL}/planogram/`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      return Array.isArray(data)
+        ? data.map(transformPlanogramFromAPI)
+        : [];
+    } catch (error) {
+      console.error('Ошибка при загрузке планограмм:', error);
+      throw error;
+    }
   },
 
   async getById(id) {
-    const planogram = planograms.find(p => p.id === parseInt(id));
-    return Promise.resolve(planogram ? { ...planogram } : null);
-  },
+    try {
+      const response = await fetch(`${API_BASE_URL}/planogram/${id}`);
 
-  async create(planogram) {
-    const newPlanogram = {
-      id: nextId++,
-      cabinet_id: planogram.cabinet_id,
-      timestamp: planogram.timestamp instanceof Date
-        ? planogram.timestamp.toISOString()
-        : planogram.timestamp,
-      mapping: { ...planogram.mapping }
-    };
-    planograms.push(newPlanogram);
-    return Promise.resolve({ ...newPlanogram });
-  },
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-  async update(id, planogram) {
-    const index = planograms.findIndex(p => p.id === parseInt(id));
-    if (index === -1) {
-      return Promise.resolve(null);
+      const data = await response.json();
+      return transformPlanogramFromAPI(data);
+    } catch (error) {
+      console.error('Ошибка при загрузке планограммы:', error);
+      throw error;
     }
-    const updated = {
-      id: parseInt(id),
-      cabinet_id: planogram.cabinet_id,
-      timestamp: planogram.timestamp instanceof Date
-        ? planogram.timestamp.toISOString()
-        : planogram.timestamp,
-      mapping: { ...planogram.mapping }
-    };
-    planograms[index] = updated;
-    return Promise.resolve({ ...updated });
+  },
+
+  async create(planogram, skus = []) {
+    try {
+      const apiData = transformPlanogramToAPI(planogram, false, skus);
+
+      const response = await fetch(`${API_BASE_URL}/planogram/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return transformPlanogramFromAPI(data);
+    } catch (error) {
+      console.error('Ошибка при создании планограммы:', error);
+      throw error;
+    }
+  },
+
+  async update(id, planogram, skus = []) {
+    try {
+      const apiData = transformPlanogramToAPI(planogram, true, skus);
+
+      const response = await fetch(`${API_BASE_URL}/planogram/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiData)
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        let errorData = {};
+        try {
+          const text = await response.text();
+          try {
+            errorData = JSON.parse(text);
+          } catch {
+            console.error('Response is not JSON');
+          }
+        } catch (e) {
+          console.error('Ошибка при чтении ответа:', e);
+        }
+        const errorMessage = errorData.detail || errorData.message || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      return transformPlanogramFromAPI(data);
+    } catch (error) {
+      console.error('Ошибка при обновлении планограммы:', error);
+      throw error;
+    }
   },
 
   async delete(id) {
-    const index = planograms.findIndex(p => p.id === parseInt(id));
-    if (index === -1) {
-      return Promise.resolve(false);
+    try {
+      const response = await fetch(`${API_BASE_URL}/planogram/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return false;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Ошибка при удалении планограммы:', error);
+      throw error;
     }
-    planograms.splice(index, 1);
-    return Promise.resolve(true);
   }
 };
 
